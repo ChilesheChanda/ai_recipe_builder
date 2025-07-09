@@ -40,30 +40,23 @@ def get_recipe_suggestion(craving, dietary_filters, prep_time, cook_time, langua
 
     return response.choices[0].message.content.strip()
 
-# --- Simple PDF Export using original FPDF ---
-class PDFRecipe(FPDF):
-    def header(self):
-        self.set_font("Arial", "B", 16)
-        self.cell(0, 10, "🍽️ AI Recipe", ln=True, align="C")
-        self.ln(10)
-
-    def body(self, text):
-        self.set_font("Arial", "", 12)
-        self.multi_cell(0, 8, text)
-        self.ln()
-
+# --- PDF Export ---
 def save_recipe_as_pdf(recipe_text):
-    pdf = PDFRecipe()
+    pdf = FPDF()
     pdf.add_page()
-    pdf.body(recipe_text)
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_font("Arial", size=12)
+
+    for line in recipe_text.split("\n"):
+        pdf.multi_cell(0, 10, line)
+
     pdf_file = "recipe.pdf"
     pdf.output(pdf_file)
     return pdf_file
 
-# --- Streamlit App UI ---
+# --- Streamlit UI ---
 def main():
     st.title("🍽️ AI Recipe Builder")
-    st.markdown("Tell me what you're craving, and I'll suggest a recipe + sides!")
 
     craving = st.text_input("What do you feel like eating?", placeholder="e.g., fried chicken")
 
@@ -82,19 +75,19 @@ def main():
             with st.spinner("Cooking up something special..."):
                 try:
                     recipe = get_recipe_suggestion(craving, dietary_filters, prep_time, cook_time, language)
-                    st.markdown("## 🍳 Your Recipe")
                     st.markdown(recipe)
 
-                    # PDF Export (with markdown-style formatting)
+                    # PDF export
                     pdf_file = save_recipe_as_pdf(recipe)
                     with open(pdf_file, "rb") as file:
-                        st.download_button("📄 Download Recipe as PDF", file, file_name="recipe.pdf")
+                        st.download_button("📄 Download as PDF", file, file_name="recipe.pdf")
 
-                    # WhatsApp Share - stripped of Markdown for plain readability
-                    plain_recipe = recipe.replace("*", "").replace("**", "").replace("##", "").replace("_", "")
-                    encoded_text = urllib.parse.quote(plain_recipe)
+                    # Email/social share
+                    encoded_text = urllib.parse.quote(recipe)
                     st.markdown("### 📤 Share Your Recipe")
-                    st.link_button("💬 Share on WhatsApp", f"https://wa.me/?text={encoded_text}")
+                    st.markdown(f"[Send via Gmail](mailto:?subject=Recipe&body={encoded_text})")
+                    st.markdown(f"[Share on WhatsApp](https://wa.me/?text={encoded_text})")
+                    st.markdown(f"[Post on Twitter/X](https://twitter.com/intent/tweet?text={encoded_text})")
 
                 except Exception as e:
                     st.error(f"Error: {e}")
