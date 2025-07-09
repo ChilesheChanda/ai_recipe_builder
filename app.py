@@ -46,6 +46,7 @@ class PDFRecipe(FPDF):
         super().__init__()
         self.add_font("NotoSans", "", "NotoSans-Regular.ttf", uni=True)
         self.add_font("NotoSans", "B", "NotoSans-Bold.ttf", uni=True)
+        self.set_margins(10, 10, 10)
         self.set_auto_page_break(auto=True, margin=15)
 
     def header(self):
@@ -63,9 +64,13 @@ class PDFRecipe(FPDF):
     def chapter_body(self, body):
         self.set_font("NotoSans", "", 12)
         self.set_text_color(50, 50, 50)
+
         for line in body.split("\n"):
             if line.strip():
-                self.multi_cell(0, 8, line.strip())
+                try:
+                    self.multi_cell(0, 8, line.strip(), max_line_height=self.font_size)
+                except RuntimeError:
+                    self.multi_cell(0, 8, line.strip(), split_only=True)
             else:
                 self.ln(2)
         self.ln()
