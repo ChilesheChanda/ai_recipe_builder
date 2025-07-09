@@ -42,23 +42,29 @@ def get_recipe_suggestion(craving, dietary_filters, prep_time, cook_time, langua
 
 # --- PDF Export Class ---
 class PDFRecipe(FPDF):
+    def __init__(self):
+        super().__init__()
+        self.add_font("NotoSans", "", "NotoSans-Regular.ttf", uni=True)
+        self.add_font("NotoSans", "B", "NotoSans-Bold.ttf", uni=True)
+        self.set_auto_page_break(auto=True, margin=15)
+
     def header(self):
-        self.set_font("Arial", "B", 16)
+        self.set_font("NotoSans", "B", 16)
         self.set_text_color(40, 40, 40)
         self.cell(0, 10, "🍽️ AI Recipe", ln=True, align="C")
         self.ln(5)
 
     def chapter_title(self, title):
-        self.set_font("Arial", "B", 14)
+        self.set_font("NotoSans", "B", 14)
         self.set_text_color(0, 102, 204)
         self.cell(0, 10, title, ln=True)
         self.ln(2)
 
     def chapter_body(self, body):
-        self.set_font("Arial", "", 12)
+        self.set_font("NotoSans", "", 12)
         self.set_text_color(50, 50, 50)
         for line in body.split("\n"):
-            if line.strip() != "":
+            if line.strip():
                 self.multi_cell(0, 8, line.strip())
             else:
                 self.ln(2)
@@ -102,9 +108,10 @@ def save_recipe_as_pdf(recipe_text):
     pdf.output(pdf_file)
     return pdf_file
 
-# --- Streamlit UI ---
+# --- Streamlit App UI ---
 def main():
     st.title("🍽️ AI Recipe Builder")
+    st.markdown("Tell me what you're craving, and I'll suggest a recipe + sides!")
 
     craving = st.text_input("What do you feel like eating?", placeholder="e.g., fried chicken")
 
@@ -123,19 +130,20 @@ def main():
             with st.spinner("Cooking up something special..."):
                 try:
                     recipe = get_recipe_suggestion(craving, dietary_filters, prep_time, cook_time, language)
+                    st.markdown("## 🍳 Your Recipe")
                     st.markdown(recipe)
 
-                    # PDF export
+                    # PDF Export
                     pdf_file = save_recipe_as_pdf(recipe)
                     with open(pdf_file, "rb") as file:
-                        st.download_button("📄 Download as PDF", file, file_name="recipe.pdf")
+                        st.download_button("📄 Download Recipe as PDF", file, file_name="recipe.pdf")
 
-                    # Email/social share
+                    # Share Options
                     encoded_text = urllib.parse.quote(recipe)
                     st.markdown("### 📤 Share Your Recipe")
-                    st.markdown(f"[Send via Gmail](mailto:?subject=Recipe&body={encoded_text})")
-                    st.markdown(f"[Share on WhatsApp](https://wa.me/?text={encoded_text})")
-                    st.markdown(f"[Post on Twitter/X](https://twitter.com/intent/tweet?text={encoded_text})")
+                    st.markdown(f"[📧 Send via Gmail](mailto:?subject=AI Recipe&body={encoded_text})")
+                    st.markdown(f"[💬 Share on WhatsApp](https://wa.me/?text={encoded_text})")
+                    st.markdown(f"[🐦 Post on Twitter/X](https://twitter.com/intent/tweet?text={encoded_text})")
 
                 except Exception as e:
                     st.error(f"Error: {e}")
