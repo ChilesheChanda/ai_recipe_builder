@@ -40,76 +40,22 @@ def get_recipe_suggestion(craving, dietary_filters, prep_time, cook_time, langua
 
     return response.choices[0].message.content.strip()
 
-# --- PDF Export Class ---
+# --- Simple PDF Export using original FPDF ---
 class PDFRecipe(FPDF):
-    def __init__(self):
-        super().__init__()
-        self.add_font("NotoSans", "", "NotoSans-Regular.ttf", uni=True)
-        self.add_font("NotoSans", "B", "NotoSans-Bold.ttf", uni=True)
-        self.set_margins(10, 10, 10)
-        self.set_auto_page_break(auto=True, margin=15)
-
     def header(self):
-        self.set_font("NotoSans", "B", 16)
-        self.set_text_color(40, 40, 40)
+        self.set_font("Arial", "B", 16)
         self.cell(0, 10, "🍽️ AI Recipe", ln=True, align="C")
-        self.ln(5)
+        self.ln(10)
 
-    def chapter_title(self, title):
-        self.set_font("NotoSans", "B", 14)
-        self.set_text_color(0, 102, 204)
-        self.cell(0, 10, title, ln=True)
-        self.ln(2)
-
-    def chapter_body(self, body):
-        self.set_font("NotoSans", "", 12)
-        self.set_text_color(50, 50, 50)
-
-        for line in body.split("\n"):
-            line = line.strip()
-            if line:
-                try:
-                    self.multi_cell(0, 8, line, split_only=True)
-                except Exception:
-                    self.multi_cell(0, 8, "[Error rendering line]")
-            else:
-                self.ln(2)
+    def body(self, text):
+        self.set_font("Arial", "", 12)
+        self.multi_cell(0, 8, text)
         self.ln()
 
-# --- Save as PDF ---
 def save_recipe_as_pdf(recipe_text):
     pdf = PDFRecipe()
     pdf.add_page()
-
-    sections = {"Title": "", "Ingredients": "", "Instructions": "", "Side Dishes": ""}
-    current_section = "Title"
-
-    for line in recipe_text.split("\n"):
-        line = line.strip()
-        if line.lower().startswith("ingredients"):
-            current_section = "Ingredients"
-        elif line.lower().startswith("instructions") or line.lower().startswith("directions"):
-            current_section = "Instructions"
-        elif "side dish" in line.lower():
-            current_section = "Side Dishes"
-        else:
-            if sections[current_section]:
-                sections[current_section] += "\n" + line
-            else:
-                sections[current_section] = line
-
-    if sections["Title"]:
-        pdf.chapter_title(sections["Title"])
-    if sections["Ingredients"]:
-        pdf.chapter_title("🧂 Ingredients")
-        pdf.chapter_body(sections["Ingredients"])
-    if sections["Instructions"]:
-        pdf.chapter_title("👩‍🍳 Instructions")
-        pdf.chapter_body(sections["Instructions"])
-    if sections["Side Dishes"]:
-        pdf.chapter_title("🍽️ Suggested Side Dishes")
-        pdf.chapter_body(sections["Side Dishes"])
-
+    pdf.body(recipe_text)
     pdf_file = "recipe.pdf"
     pdf.output(pdf_file)
     return pdf_file
@@ -139,17 +85,16 @@ def main():
                     st.markdown("## 🍳 Your Recipe")
                     st.markdown(recipe)
 
-                    # PDF Export
+                    # PDF Export (with markdown-style formatting)
                     pdf_file = save_recipe_as_pdf(recipe)
                     with open(pdf_file, "rb") as file:
                         st.download_button("📄 Download Recipe as PDF", file, file_name="recipe.pdf")
 
-                    # Share Options
-                    encoded_text = urllib.parse.quote(recipe)
+                    # WhatsApp Share - stripped of Markdown for plain readability
+                    plain_recipe = recipe.replace("*", "").replace("**", "").replace("##", "").replace("_", "")
+                    encoded_text = urllib.parse.quote(plain_recipe)
                     st.markdown("### 📤 Share Your Recipe")
-                    st.markdown(f"[📧 Send via Gmail](mailto:?subject=AI Recipe&body={encoded_text})")
-                    st.markdown(f"[💬 Share on WhatsApp](https://wa.me/?text={encoded_text})")
-                    st.markdown(f"[🐦 Post on Twitter/X](https://twitter.com/intent/tweet?text={encoded_text})")
+                    st.link_button("💬 Share on WhatsApp", f"https://wa.me/?text={encoded_text}")
 
                 except Exception as e:
                     st.error(f"Error: {e}")
