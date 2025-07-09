@@ -2,6 +2,7 @@ import streamlit as st
 from openai import OpenAI
 import urllib.parse
 from fpdf import FPDF
+import textwrap
 
 # --- Load OpenAI API key ---
 api_key = st.secrets["OPENAI_API_KEY"]
@@ -65,12 +66,17 @@ class PDFRecipe(FPDF):
         self.set_font("NotoSans", "", 12)
         self.set_text_color(50, 50, 50)
 
+        max_width = self.w - self.l_margin - self.r_margin
+        char_limit = int(max_width / (self.get_string_width('M') or 1) * 0.9)
+
         for line in body.split("\n"):
             if line.strip():
-                try:
-                    self.multi_cell(0, 8, line.strip(), max_line_height=self.font_size)
-                except RuntimeError:
-                    self.multi_cell(0, 8, line.strip(), split_only=True)
+                wrapped = textwrap.wrap(line.strip(), width=char_limit, break_long_words=True, break_on_hyphens=False)
+                for segment in wrapped:
+                    try:
+                        self.multi_cell(0, 8, segment, max_line_height=self.font_size)
+                    except RuntimeError:
+                        self.multi_cell(0, 8, segment, split_only=True)
             else:
                 self.ln(2)
         self.ln()
