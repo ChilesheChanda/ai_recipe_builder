@@ -40,15 +40,63 @@ def get_recipe_suggestion(craving, dietary_filters, prep_time, cook_time, langua
 
     return response.choices[0].message.content.strip()
 
-# --- PDF Export ---
+# --- PDF Export Class ---
+class PDFRecipe(FPDF):
+    def header(self):
+        self.set_font("Arial", "B", 16)
+        self.set_text_color(40, 40, 40)
+        self.cell(0, 10, "🍽️ AI Recipe", ln=True, align="C")
+        self.ln(5)
+
+    def chapter_title(self, title):
+        self.set_font("Arial", "B", 14)
+        self.set_text_color(0, 102, 204)
+        self.cell(0, 10, title, ln=True)
+        self.ln(2)
+
+    def chapter_body(self, body):
+        self.set_font("Arial", "", 12)
+        self.set_text_color(50, 50, 50)
+        for line in body.split("\n"):
+            if line.strip() != "":
+                self.multi_cell(0, 8, line.strip())
+            else:
+                self.ln(2)
+        self.ln()
+
+# --- Save as PDF ---
 def save_recipe_as_pdf(recipe_text):
-    pdf = FPDF()
+    pdf = PDFRecipe()
     pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.set_font("Arial", size=12)
+
+    sections = {"Title": "", "Ingredients": "", "Instructions": "", "Side Dishes": ""}
+    current_section = "Title"
 
     for line in recipe_text.split("\n"):
-        pdf.multi_cell(0, 10, line)
+        line = line.strip()
+        if line.lower().startswith("ingredients"):
+            current_section = "Ingredients"
+        elif line.lower().startswith("instructions") or line.lower().startswith("directions"):
+            current_section = "Instructions"
+        elif "side dish" in line.lower():
+            current_section = "Side Dishes"
+        else:
+            if sections[current_section]:
+                sections[current_section] += "\n" + line
+            else:
+                sections[current_section] = line
+
+    if sections["Title"]:
+        pdf.chapter_title(sections["Title"])
+    if sections["Ingredients"]:
+        pdf.chapter_title("🧂 Ingredients")
+        pdf.chapter_body(sections["Ingredients"])
+    if sections["Instructions"]:
+        pdf.chapter_title("👩‍🍳 Instructions")
+        pdf.chapter_body(sections["Instructions"])
+    if sections["Side Dishes"]:
+        pdf.chapter_title("🍽️ Suggested Side Dishes")
+        pdf.chapter_body(sections["Side Dishes"])
 
     pdf_file = "recipe.pdf"
     pdf.output(pdf_file)
